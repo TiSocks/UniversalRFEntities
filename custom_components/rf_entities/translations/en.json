@@ -3,12 +3,12 @@
     "step": {
       "user": {
         "title": "Create RF Device",
-        "description": "Configure a new virtual RF device. You can choose a transceiver entity (e.g. remote.esphome_bridge) or specify a custom transmission service.",
+        "description": "Configure a new virtual RF device. The integration will auto-detect your ESPHome bridge if it uses the approved 'send_raw_rf' pattern.",
         "data": {
           "device_name": "Device Name",
-          "transceiver_entity": "Transceiver Remote Entity",
+          "bridge_service": "Detected ESPHome RF Bridge",
           "tx_service": "Custom TX Service (Optional)",
-          "rx_event": "Receiver Event (Optional)"
+          "rx_event": "Receiver Event"
         }
       }
     },
@@ -55,12 +55,12 @@
         }
       },
       "edit_transceiver": {
-        "title": "Edit Transceiver Settings",
-        "description": "Modify the transceiver configuration used by this RF device.",
+        "title": "Edit Transceiver",
+        "description": "Update the RF transceiver bridge configuration.",
         "data": {
-          "transceiver_entity": "Transceiver Remote Entity",
+          "bridge_service": "Detected ESPHome RF Bridge",
           "tx_service": "Custom TX Service (Optional)",
-          "rx_event": "Receiver Event (Optional)"
+          "rx_event": "Receiver Event"
         }
       },
       "learn_command": {

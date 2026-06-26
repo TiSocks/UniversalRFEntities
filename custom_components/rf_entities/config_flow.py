@@ -41,25 +41,21 @@ class RFEntitiesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            tx_entity = user_input.get(CONF_TRANSCEIVER_ENTITY)
-            tx_service = user_input.get(CONF_TX_SERVICE)
+            tx_service = user_input.get("bridge_service") or user_input.get(CONF_TX_SERVICE)
 
-            # Validate that at least one sending method is configured
-            if not tx_entity and not tx_service:
+            if not tx_service:
                 errors["base"] = "missing_transceiver"
-            
-            if tx_service and "." not in tx_service:
+            elif "." not in tx_service:
                 errors[CONF_TX_SERVICE] = "invalid_service"
 
             if not errors:
-                # Store device transceiver settings in config entry data
                 return self.async_create_entry(
                     title=user_input[CONF_DEVICE_NAME],
                     data={
                         CONF_DEVICE_NAME: user_input[CONF_DEVICE_NAME],
-                        CONF_TRANSCEIVER_ENTITY: tx_entity,
-                        CONF_TX_SERVICE: tx_service or DEFAULT_TX_SERVICE,
+                        CONF_TX_SERVICE: tx_service,
                         CONF_RX_EVENT: user_input.get(CONF_RX_EVENT) or DEFAULT_RX_EVENT,
+                        CONF_TRANSCEIVER_ENTITY: "",
                     },
                     options={
                         CONF_BUTTONS: {},
@@ -67,22 +63,23 @@ class RFEntitiesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                 )
 
-        # Look up existing remote entities to populate a dropdown
-        remotes = [
-            state.entity_id for state in self.hass.states.async_all("remote")
-        ]
+        esphome_services = self.hass.services.async_services().get("esphome", {})
+        bridges = []
+        for service_name in esphome_services:
+            if service_name.endswith("_send_raw_rf"):
+                bridges.append(f"esphome.{service_name}")
 
         schema_fields = {
             vol.Required(CONF_DEVICE_NAME, default="Universal RF Entities"): str,
         }
 
-        if remotes:
-            schema_fields[vol.Optional(CONF_TRANSCEIVER_ENTITY)] = vol.In(remotes)
+        if bridges:
+            schema_fields[vol.Optional("bridge_service", default=bridges[0])] = vol.In(bridges)
+            schema_fields[vol.Optional(CONF_TX_SERVICE)] = str
         else:
-            schema_fields[vol.Optional(CONF_TRANSCEIVER_ENTITY)] = str
+            schema_fields[vol.Optional(CONF_TX_SERVICE, default="esphome.rfbridge433_send_raw_rf")] = str
 
         schema_fields.update({
-            vol.Optional(CONF_TX_SERVICE, default=DEFAULT_TX_SERVICE): str,
             vol.Optional(CONF_RX_EVENT, default=DEFAULT_RX_EVENT): str,
         })
 
@@ -393,36 +390,32 @@ class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
         """Modify transceiver parameters."""
         errors = {}
         if user_input is not None:
-            # We must update data, since it stores core variables, or we can save it in options
-            # To be safe, let's update data in the config entry
+            tx_service = user_input.get("bridge_service") or user_input.get(CONF_TX_SERVICE)
             new_data = dict(self.config_entry.data)
             new_data.update({
-                CONF_TRANSCEIVER_ENTITY: user_input.get(CONF_TRANSCEIVER_ENTITY),
-                CONF_TX_SERVICE: user_input.get(CONF_TX_SERVICE),
+                CONF_TX_SERVICE: tx_service,
                 CONF_RX_EVENT: user_input.get(CONF_RX_EVENT),
             })
             
             self.hass.config_entries.async_update_entry(self.config_entry, data=new_data)
-            # Re-save options to trigger update listener reload
             return self.async_create_entry(title="", data=dict(self.config_entry.options))
 
-        # Look up existing remote entities to populate dropdown
-        remotes = [
-            state.entity_id for state in self.hass.states.async_all("remote")
-        ]
+        esphome_services = self.hass.services.async_services().get("esphome", {})
+        bridges = []
+        for service_name in esphome_services:
+            if service_name.endswith("_send_raw_rf"):
+                bridges.append(f"esphome.{service_name}")
         
-        current_transceiver = self.config_entry.data.get(CONF_TRANSCEIVER_ENTITY) or ""
         current_tx_service = self.config_entry.data.get(CONF_TX_SERVICE, DEFAULT_TX_SERVICE)
         current_rx_event = self.config_entry.data.get(CONF_RX_EVENT, DEFAULT_RX_EVENT)
 
         schema_fields = {}
-        if remotes:
-            schema_fields[vol.Optional(CONF_TRANSCEIVER_ENTITY, default=current_transceiver)] = vol.In(remotes)
-        else:
-            schema_fields[vol.Optional(CONF_TRANSCEIVER_ENTITY, default=current_transceiver)] = str
-
+        if bridges:
+            default_bridge = current_tx_service if current_tx_service in bridges else bridges[0]
+            schema_fields[vol.Optional("bridge_service", default=default_bridge)] = vol.In(bridges)
+            
         schema_fields.update({
-            vol.Optional(CONF_TX_SERVICE, default=current_tx_service): str,
+            vol.Optional(CONF_TX_SERVICE, default=current_tx_service if current_tx_service not in bridges else ""): str,
             vol.Optional(CONF_RX_EVENT, default=current_rx_event): str,
         })
 
