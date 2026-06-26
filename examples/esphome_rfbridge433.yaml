@@ -1,0 +1,98 @@
+# Board: Generic ESP32 Board (Generic)
+# Definition: definitions/boards/generic-esp32/manifest.yaml
+
+esphome:
+  name: rfbridge433
+  friendly_name: RFBridge433
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.1"
+      sram1_as_iram: true
+
+logger:
+
+api:
+  encryption:
+    key: !secret rf_api_encryption_key
+  services:
+    # Universal Raw Transmit Service
+    # Variable renamed to 'code' so the HA integration can auto-map learned arrays
+    - service: send_raw_rf
+      variables:
+        code: int[]
+        retries: int
+        delay_ms: int
+      then:
+        - repeat: 
+            count: !lambda 'return retries;'
+            then:
+              - remote_transmitter.transmit_raw:
+                  # This standardizes the array format so the compiler doesn't panic
+                  code: !lambda 'return std::vector<int32_t>(code.begin(), code.end());'
+              - delay: !lambda 'return delay_ms;'
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: RFBridge433 Fallback Hotspot
+    password: !secret rf_fallback_ap_password
+
+captive_portal:
+
+# Define the SPI bus required by the CC1101 module
+spi:
+  clk_pin: GPIO18
+  miso_pin: GPIO19
+  mosi_pin: GPIO23
+
+# Configure the CC1101 transceiver
+cc1101:
+  cs_pin: GPIO5
+  frequency: 433.92MHz # Standard 433 frequency
+
+# Set up the transmitter to handle CC1101 state switching
+remote_transmitter:
+  pin: GPIO4 # Connect this to GDO0 on the CC1101
+  carrier_duty_percent: 100%
+  rmt_symbols: 320
+  on_transmit:
+    then:
+      - cc1101.begin_tx:
+  on_complete:
+    then:
+      - cc1101.begin_rx:
+
+# Set up the receiver for Universal Raw capture
+remote_receiver:
+  pin: GPIO2 # Connect this to GDO2 on the CC1101
+  dump: raw 
+  
+  # Forward Raw codes to Home Assistant
+  on_raw:
+    then:
+      # OPTIMIZATION: Only forward signals with more than 20 edges.
+      # This prevents background 433MHz static noise from flooding Home Assistant.
+      - if:
+          condition:
+            lambda: 'return x.size() > 20;'
+          then:
+            - homeassistant.event:
+                event: esphome.rf_code_received
+                data:
+                  protocol: "raw"
+                  code: !lambda |-
+                    std::string res = "[";
+                    for (size_t i = 0; i < x.size(); i++) {
+                      res += std::to_string(x[i]);
+                      if (i < x.size() - 1) res += ", ";
+                    }
+                    res += "]";
+                    return res;

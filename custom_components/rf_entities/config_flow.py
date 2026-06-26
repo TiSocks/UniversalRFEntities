@@ -138,19 +138,23 @@ class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
             elif action == "edit_transceiver":
                 return await self.async_step_edit_transceiver()
 
+        from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectOptionDict, SelectSelectorMode
+        
         actions = [
-            "add_button",
-            "add_sensor",
-            "delete_entity",
-            "learn_command",
-            "edit_transceiver",
+            SelectOptionDict(value="add_button", label="Add Button Entity"),
+            SelectOptionDict(value="add_sensor", label="Add Sensor Entity"),
+            SelectOptionDict(value="delete_entity", label="Remove Entity"),
+            SelectOptionDict(value="learn_command", label="Learn RF Code (Recommended)"),
+            SelectOptionDict(value="edit_transceiver", label="Edit Transceiver Settings"),
         ]
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Required("action", default="add_button"): vol.In(actions)
-            })
+                vol.Required("action", default="add_button"): SelectSelector(
+                    SelectSelectorConfig(options=actions, mode=SelectSelectorMode.LIST)
+                )
+            }),
         )
 
     async def async_step_learn_command(self, user_input=None):
