@@ -5,13 +5,20 @@ This walkthrough details the setup, configuration, and operation of the `rf_enti
 ---
 
 ## 1. Installation
-To install the custom integration, copy the `custom_components/rf_entities` directory to your Home Assistant `config/custom_components` directory:
 
-```bash
-cp -r custom_components/rf_entities /path/to/your/homeassistant/config/custom_components/
-```
+This integration is designed to be installed effortlessly via [HACS](https://hacs.xyz/).
 
-After copying the files, restart Home Assistant to load the integration.
+### HACS Custom Repository (Recommended)
+1. Open Home Assistant and navigate to **HACS** > **Integrations**.
+2. Click the three dots (⋮) in the top right corner and select **Custom repositories**.
+3. Paste the URL of this repository: `https://github.com/TiSocks/UniversalRFEntities`
+4. Select the category: **Integration**.
+5. Click **Add**.
+6. You will now see **Universal RF Entities** in your HACS integrations list. Click on it and select **Download**.
+7. Restart Home Assistant to apply the changes.
+
+### Manual Installation
+If you prefer not to use HACS, copy the `custom_components/rf_entities` directory from this repository into your Home Assistant `config/custom_components` directory and restart Home Assistant.
 
 ---
 

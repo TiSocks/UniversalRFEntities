@@ -96,16 +96,16 @@ class RFEntitiesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return RFEntitiesOptionsFlow(config_entry)
+        return RFEntitiesOptionsFlow()
 
 
 class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for the RF device configuration."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
         self.selected_action = None
+        # self.config_entry is automatically populated by the parent OptionsFlow class in newer HA versions.
 
     async def async_step_init(self, user_input=None):
         """Manage the options flow menu."""
