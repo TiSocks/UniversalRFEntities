@@ -76,6 +76,7 @@ class RFButtonEntity(ButtonEntity):
         self._device_name = device_name
         self._slug = slug
         self._attr_name = name
+        self._attr_has_entity_name = True
         self._attr_unique_id = f"{entry_id}_button_{slug}"
         self._code = code
         self._protocol = protocol

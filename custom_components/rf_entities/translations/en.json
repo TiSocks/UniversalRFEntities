@@ -62,7 +62,25 @@
           "tx_service": "Custom TX Service (Optional)",
           "rx_event": "Receiver Event (Optional)"
         }
+      },
+      "learn_command": {
+        "title": "Learn RF Code",
+        "description": "Select the entity you want to program an RF code for.",
+        "data": {
+          "entity_id": "Target Entity"
+        }
+      },
+      "learn_timeout": {
+        "title": "Learning Timed Out",
+        "description": "{error}"
+      },
+      "learn_success": {
+        "title": "Successfully Learned RF Code!",
+        "description": "Captured Code: {code}\nProtocol: {protocol}\n\nClick Submit to save this code to the entity."
       }
+    },
+    "progress": {
+      "listening_for_rf": "Please press the button on your physical RF remote now. Waiting for a signal..."
     }
   }
 }

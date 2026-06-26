@@ -74,6 +74,7 @@ class RFSensorEntity(SensorEntity):
         self._device_name = device_name
         self._slug = slug
         self._attr_name = name
+        self._attr_has_entity_name = True
         self._attr_unique_id = f"{entry_id}_sensor_{slug}"
         self._state_on_code = state_on_code
         self._state_off_code = state_off_code
