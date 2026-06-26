@@ -124,197 +124,94 @@ class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
         # self.config_entry is automatically populated by the parent OptionsFlow class in newer HA versions.
 
     async def async_step_init(self, user_input=None):
-        """Manage the options flow menu."""
+        """Manage the options."""
         if user_input is not None:
             action = user_input["action"]
-            if action == "learn_command":
-                return await self.async_step_learn_command()
             if action == "add_button":
                 return await self.async_step_add_button()
-            if action == "add_sensor":
+            elif action == "add_sensor":
                 return await self.async_step_add_sensor()
-            if action == "delete_entity":
+            elif action == "delete_entity":
                 return await self.async_step_delete_entity()
-            if action == "edit_transceiver":
+            elif action == "learn_command":
+                return await self.async_step_learn_command()
+            elif action == "edit_transceiver":
                 return await self.async_step_edit_transceiver()
 
-        actions = {
-            "learn_command": "Learn RF Code (Recommended)",
-            "add_button": "Add Button Entity",
-            "add_sensor": "Add Sensor Entity",
-            "delete_entity": "Remove Entity",
-            "edit_transceiver": "Edit Transceiver Settings",
-        }
+        actions = [
+            "add_button",
+            "add_sensor",
+            "delete_entity",
+            "learn_command",
+            "edit_transceiver",
+        ]
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Required("action"): vol.In(actions),
-            }),
-        )
-
-
-    async def async_step_learn_command(self, user_input=None):
-        """Select an entity to learn a code for."""
-        buttons = self.config_entry.options.get(CONF_BUTTONS, {})
-        sensors = self.config_entry.options.get(CONF_SENSORS, {})
-        
-        entities = {}
-        for slug, config in buttons.items():
-            entities[f"btn_{slug}"] = f"Button: {config[CONF_BUTTON_NAME]}"
-        for slug, config in sensors.items():
-            entities[f"sens_{slug}"] = f"Sensor: {config[CONF_SENSOR_NAME]}"
-
-        if not entities:
-            return self.async_show_form(
-                step_id="init",
-                data_schema=vol.Schema({}),
-                errors={"base": "no_entities_to_delete"},
-            )
-
-        if user_input is not None:
-            self._learn_entity = user_input["entity_id"]
-            
-            self._learn_task = self.hass.async_create_task(
-                self._async_listen_for_rf_code()
-            )
-            return self.async_show_progress(
-                step_id="learn_progress",
-                progress_action="listening_for_rf",
-            )
-
-        return self.async_show_form(
-            step_id="learn_command",
-            data_schema=vol.Schema({
-                vol.Required("entity_id"): vol.In(entities),
-            }),
-        )
-
-    async def _async_listen_for_rf_code(self):
-        """Background task to listen for RF code."""
-        import asyncio
-        from homeassistant.core import callback
-        
-        learned_event = asyncio.Event()
-        self._learned_data = {}
-        
-        rx_event = self.config_entry.data.get(CONF_RX_EVENT, DEFAULT_RX_EVENT)
-
-        @callback
-        def handle_event(event):
-            data = event.data
-            code = None
-            for key in ["code", "value", "raw", "data", "key"]:
-                if key in data:
-                    code = str(data[key])
-                    break
-            
-            if code:
-                self._learned_data["code"] = code
-                if "protocol" in data or "proto" in data:
-                    self._learned_data["protocol"] = str(data.get("protocol") or data.get("proto"))
-                if "pulse_length" in data or "pulse" in data:
-                    self._learned_data["pulse_length"] = str(data.get("pulse_length") or data.get("pulse"))
-                learned_event.set()
-
-        remove_listener = self.hass.bus.async_listen(rx_event, handle_event)
-        
-        try:
-            await asyncio.wait_for(learned_event.wait(), timeout=30)
-            self._learn_error = False
-        except asyncio.TimeoutError:
-            self._learn_error = True
-        finally:
-            remove_listener()
-            # Manually trigger the flow to advance (critical for OptionsFlows!)
-            self.hass.async_create_task(
-                self.hass.config_entries.options.async_configure(flow_id=self.flow_id)
-            )
-
-    async def async_step_learn_progress(self, user_input=None):
-        """Handle completion of the learn task."""
-        if getattr(self, "_learn_error", False):
-            return self.async_show_progress_done(next_step_id="learn_timeout")
-        return self.async_show_progress_done(next_step_id="learn_success")
-
-    async def async_step_learn_timeout(self, user_input=None):
-        """Show timeout error."""
-        if user_input is not None:
-            return await self.async_step_init()
-            
-        return self.async_show_form(
-            step_id="learn_timeout",
-            description_placeholders={"error": "No RF code received within 30 seconds."},
-        )
-
-    async def async_step_learn_success(self, user_input=None):
-        """Show success and save code."""
-        if user_input is not None:
-            new_options = dict(self.config_entry.options)
-            code = self._learned_data.get("code")
-            protocol = self._learned_data.get("protocol", "")
-            pulse_length = self._learned_data.get("pulse_length", "")
-            
-            if self._learn_entity.startswith("btn_"):
-                slug = self._learn_entity[4:]
-                buttons = dict(new_options.get(CONF_BUTTONS, {}))
-                btn = dict(buttons[slug])
-                btn[CONF_BUTTON_CODE] = code
-                if protocol: btn[CONF_BUTTON_PROTOCOL] = protocol
-                if pulse_length: btn[CONF_BUTTON_PULSE_LENGTH] = pulse_length
-                buttons[slug] = btn
-                new_options[CONF_BUTTONS] = buttons
-            else:
-                slug = self._learn_entity[5:]
-                sensors = dict(new_options.get(CONF_SENSORS, {}))
-                sens = dict(sensors[slug])
-                sens[CONF_SENSOR_STATE_ON_CODE] = code
-                sensors[slug] = sens
-                new_options[CONF_SENSORS] = sensors
-                
-            return self.async_create_entry(title="", data=new_options)
-
-        return self.async_show_form(
-            step_id="learn_success",
-            description_placeholders={
-                "code": self._learned_data.get("code", "Unknown"),
-                "protocol": self._learned_data.get("protocol", "None"),
-            },
+                vol.Required("action", default="add_button"): vol.In(actions)
+            })
         )
 
     async def async_step_add_button(self, user_input=None):
-        """Add a new button entity configuration."""
-        errors = {}
+        """Add a new button entity."""
         if user_input is not None:
-            name = user_input[CONF_BUTTON_NAME]
-            slug = slugify(name)
+            name = user_input["name"]
+            code = user_input.get("code", "")
             
-            # Retrieve existing configuration
-            buttons = dict(self.config_entry.options.get(CONF_BUTTONS, {}))
+            # Store in memory temporarily
+            self._new_button_name = name
             
-            buttons[slug] = {
-                CONF_BUTTON_NAME: name,
-                CONF_BUTTON_CODE: user_input.get(CONF_BUTTON_CODE, ""),
-                CONF_BUTTON_PROTOCOL: user_input.get(CONF_BUTTON_PROTOCOL, ""),
-                CONF_BUTTON_PULSE_LENGTH: user_input.get(CONF_BUTTON_PULSE_LENGTH, ""),
-            }
-            
-            new_options = dict(self.config_entry.options)
-            new_options[CONF_BUTTONS] = buttons
-            
-            return self.async_create_entry(title="", data=new_options)
-
-        schema = vol.Schema({
-            vol.Required(CONF_BUTTON_NAME): str,
-            vol.Optional(CONF_BUTTON_CODE): str,
-            vol.Optional(CONF_BUTTON_PROTOCOL): str,
-            vol.Optional(CONF_BUTTON_PULSE_LENGTH): str,
-        })
+            if user_input.get("learn_code_now", not bool(code)):
+                self._learn_entity = None # Signals that we are creating a new button, not updating an existing one
+                self._learn_task = self.hass.async_create_task(
+                    self._async_listen_for_rf_code()
+                )
+                return self.async_show_progress(
+                    step_id="learn_progress",
+                    progress_action="listening_for_rf",
+                )
+            else:
+                new_data = dict(self.config_entry.options)
+                buttons = dict(new_data.get(CONF_BUTTONS, {}))
+                
+                # Create slug
+                import re
+                slug = re.sub(r'[^a-z0-9_]+', '_', name.lower()).strip('_')
+                
+                buttons[slug] = {
+                    "name": name,
+                    "code": code,
+                    "protocol": "",
+                    "pulse_length": "",
+                }
+                new_data[CONF_BUTTONS] = buttons
+                self.hass.config_entries.async_update_entry(self.config_entry, options=new_data)
+                
+                return await self.async_step_add_another()
 
         return self.async_show_form(
             step_id="add_button",
-            data_schema=schema,
-            errors=errors,
+            data_schema=vol.Schema({
+                vol.Required("name"): str,
+                vol.Optional("code"): str,
+                vol.Optional("learn_code_now", default=True): bool,
+            })
+        )
+
+    async def async_step_add_another(self, user_input=None):
+        """Ask if user wants to add another button."""
+        if user_input is not None:
+            if user_input["next_action"] == "Add Another Button":
+                return await self.async_step_add_button()
+            else:
+                return self.async_create_entry(title="", data=dict(self.config_entry.options))
+                
+        return self.async_show_form(
+            step_id="add_another",
+            data_schema=vol.Schema({
+                vol.Required("next_action", default="Add Another Button"): vol.In(["Add Another Button", "Finish and Close"])
+            })
         )
 
     async def async_step_add_sensor(self, user_input=None):

@@ -36,12 +36,11 @@
       },
       "add_button": {
         "title": "Add Button",
-        "description": "Add a new button entity to send an RF code. You can enter the code manually or leave it blank and use the Learn Command service later.",
+        "description": "Create a new button entity.",
         "data": {
           "name": "Button Name",
-          "code": "RF Code",
-          "protocol": "Protocol",
-          "pulse_length": "Pulse Length"
+          "code": "RF Code (Leave blank to auto-learn)",
+          "learn_code_now": "Learn RF Code Now"
         }
       },
       "add_sensor": {
@@ -84,7 +83,7 @@
       },
       "learn_success": {
         "title": "Successfully Learned RF Code!",
-        "description": "Captured Code: {code}\nProtocol: {protocol}\n\nClick Submit to save this code to the entity."
+        "description": "Captured Code: {code}\nProtocol: {protocol}\n\nClick Submit to save."
       },
       "custom_options": {
         "title": "Custom Configuration",
@@ -92,6 +91,13 @@
         "data": {
           "tx_service": "Custom TX Service",
           "rx_event": "Receiver Event"
+        }
+      },
+      "add_another": {
+        "title": "Button Created!",
+        "description": "Your button has been successfully created. Would you like to add another one?",
+        "data": {
+          "next_action": "Next Action"
         }
       }
     },
