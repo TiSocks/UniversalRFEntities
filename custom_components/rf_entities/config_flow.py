@@ -165,7 +165,6 @@ class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
             return self.async_show_progress(
                 step_id="learn_progress",
                 progress_action="listening_for_rf",
-                progress_task=self._learn_task,
             )
 
         return self.async_show_form(
@@ -211,6 +210,10 @@ class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
             self._learn_error = True
         finally:
             remove_listener()
+            # Manually trigger the flow to advance (critical for OptionsFlows!)
+            self.hass.async_create_task(
+                self.hass.config_entries.options.async_configure(flow_id=self.flow_id)
+            )
 
     async def async_step_learn_progress(self, user_input=None):
         """Handle completion of the learn task."""
