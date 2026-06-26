@@ -1,0 +1,68 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create RF Device",
+        "description": "Configure a new virtual RF device. You can choose a transceiver entity (e.g. remote.esphome_bridge) or specify a custom transmission service.",
+        "data": {
+          "device_name": "Device Name",
+          "transceiver_entity": "Transceiver Remote Entity",
+          "tx_service": "Custom TX Service (Optional)",
+          "rx_event": "Receiver Event (Optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_service": "The custom service specified is invalid or not registered.",
+      "missing_transceiver": "You must specify either a remote transceiver entity or a custom TX service."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage RF Device",
+        "description": "Choose an action to manage this RF device's buttons and sensors.",
+        "data": {
+          "action": "Select Action"
+        }
+      },
+      "add_button": {
+        "title": "Add Button",
+        "description": "Add a new button entity to send an RF code. You can enter the code manually or leave it blank and use the Learn Command service later.",
+        "data": {
+          "name": "Button Name",
+          "code": "RF Code",
+          "protocol": "Protocol",
+          "pulse_length": "Pulse Length"
+        }
+      },
+      "add_sensor": {
+        "title": "Add Sensor",
+        "description": "Add a new sensor or binary sensor entity. For a binary sensor, you can specify codes that turn it ON or OFF, plus an optional auto-off delay.",
+        "data": {
+          "name": "Sensor Name",
+          "type": "Sensor Type",
+          "state_on_code": "ON RF Code (Binary Sensor only)",
+          "state_off_code": "OFF RF Code (Binary Sensor only)",
+          "auto_off_sec": "Auto-Off Delay (Seconds, Binary Sensor only)"
+        }
+      },
+      "delete_entity": {
+        "title": "Remove Entity",
+        "description": "Select a button or sensor entity to remove from this RF device.",
+        "data": {
+          "entity_id": "Select Entity"
+        }
+      },
+      "edit_transceiver": {
+        "title": "Edit Transceiver Settings",
+        "description": "Modify the transceiver configuration used by this RF device.",
+        "data": {
+          "transceiver_entity": "Transceiver Remote Entity",
+          "tx_service": "Custom TX Service (Optional)",
+          "rx_event": "Receiver Event (Optional)"
+        }
+      }
+    }
+  }
+}
