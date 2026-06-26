@@ -1,10 +1,12 @@
 {
   "domain": "rf_entities",
   "name": "RF Entities",
-  "codeowners": ["@TiSocks"],
+  "codeowners": [
+    "@TiSocks"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/TiSocks/UniversalRFEntities",
   "iot_class": "local_push",
   "requirements": [],
-  "version": "1.4.3"
+  "version": "1.4.4"
 }
