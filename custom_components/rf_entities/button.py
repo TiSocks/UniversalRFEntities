@@ -163,6 +163,10 @@ class RFButtonEntity(ButtonEntity):
                     except ValueError:
                         service_data["pulse_length"] = self._pulse_length
 
+        if tx_service.startswith("esphome."):
+            service_data["retries"] = self._transceiver_config.get("tx_retries", 3)
+            service_data["delay_ms"] = self._transceiver_config.get("tx_delay_ms", 15)
+
         _LOGGER.info(
             "Sending RF code for button '%s' using service %s: %s",
             self._attr_name,

@@ -41,26 +41,24 @@ class RFEntitiesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            tx_service = user_input.get("bridge_service") or user_input.get(CONF_TX_SERVICE)
-
-            if not tx_service:
-                errors["base"] = "missing_transceiver"
-            elif "." not in tx_service:
-                errors[CONF_TX_SERVICE] = "invalid_service"
-
-            if not errors:
+            self.new_device_name = user_input["device_name"]
+            
+            if user_input["bridge_service"] == "Custom":
+                self.new_device_retries = user_input.get("tx_retries", 3)
+                self.new_device_delay = user_input.get("tx_delay_ms", 15)
+                return await self.async_step_custom()
+            else:
                 return self.async_create_entry(
-                    title=user_input[CONF_DEVICE_NAME],
+                    title=self.new_device_name,
                     data={
-                        CONF_DEVICE_NAME: user_input[CONF_DEVICE_NAME],
-                        CONF_TX_SERVICE: tx_service,
-                        CONF_RX_EVENT: user_input.get(CONF_RX_EVENT) or DEFAULT_RX_EVENT,
-                        CONF_TRANSCEIVER_ENTITY: "",
+                        "device_name": self.new_device_name,
+                        "tx_service": user_input["bridge_service"],
+                        "rx_event": "esphome.rf_code_received",
+                        "transceiver_entity": "",
+                        "tx_retries": user_input.get("tx_retries", 3),
+                        "tx_delay_ms": user_input.get("tx_delay_ms", 15),
                     },
-                    options={
-                        CONF_BUTTONS: {},
-                        CONF_SENSORS: {},
-                    },
+                    options={"buttons": {}, "sensors": {}},
                 )
 
         esphome_services = self.hass.services.async_services().get("esphome", {})
@@ -68,24 +66,45 @@ class RFEntitiesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         for service_name in esphome_services:
             if service_name.endswith("_send_raw_rf"):
                 bridges.append(f"esphome.{service_name}")
+                
+        bridges.append("Custom")
 
         schema_fields = {
-            vol.Required(CONF_DEVICE_NAME, default="Universal RF Entities"): str,
+            vol.Required("device_name", default="Universal RF Entities"): str,
+            vol.Required("bridge_service", default=bridges[0]): vol.In(bridges),
+            vol.Optional("tx_retries", default=3): int,
+            vol.Optional("tx_delay_ms", default=15): int,
         }
-
-        if bridges:
-            schema_fields[vol.Optional("bridge_service", default=bridges[0])] = vol.In(bridges)
-            schema_fields[vol.Optional(CONF_TX_SERVICE)] = str
-        else:
-            schema_fields[vol.Optional(CONF_TX_SERVICE, default="esphome.rfbridge433_send_raw_rf")] = str
-
-        schema_fields.update({
-            vol.Optional(CONF_RX_EVENT, default=DEFAULT_RX_EVENT): str,
-        })
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(schema_fields),
+            errors=errors,
+        )
+
+    async def async_step_custom(self, user_input=None):
+        """Handle custom transceiver details."""
+        errors = {}
+        if user_input is not None:
+            return self.async_create_entry(
+                title=self.new_device_name,
+                data={
+                    "device_name": self.new_device_name,
+                    "tx_service": user_input["tx_service"],
+                    "rx_event": user_input["rx_event"],
+                    "transceiver_entity": "",
+                    "tx_retries": getattr(self, "new_device_retries", 3),
+                    "tx_delay_ms": getattr(self, "new_device_delay", 15),
+                },
+                options={"buttons": {}, "sensors": {}},
+            )
+
+        return self.async_show_form(
+            step_id="custom",
+            data_schema=vol.Schema({
+                vol.Required("tx_service"): str,
+                vol.Required("rx_event", default="esphome.rf_code_received"): str,
+            }),
             errors=errors,
         )
 
@@ -390,13 +409,18 @@ class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
         """Modify transceiver parameters."""
         errors = {}
         if user_input is not None:
-            tx_service = user_input.get("bridge_service") or user_input.get(CONF_TX_SERVICE)
+            if user_input["bridge_service"] == "Custom":
+                self.edit_retries = user_input.get("tx_retries", 3)
+                self.edit_delay = user_input.get("tx_delay_ms", 15)
+                return await self.async_step_custom_options()
+                
             new_data = dict(self.config_entry.data)
             new_data.update({
-                CONF_TX_SERVICE: tx_service,
-                CONF_RX_EVENT: user_input.get(CONF_RX_EVENT),
+                "tx_service": user_input["bridge_service"],
+                "rx_event": "esphome.rf_code_received",
+                "tx_retries": user_input.get("tx_retries", 3),
+                "tx_delay_ms": user_input.get("tx_delay_ms", 15),
             })
-            
             self.hass.config_entries.async_update_entry(self.config_entry, data=new_data)
             return self.async_create_entry(title="", data=dict(self.config_entry.options))
 
@@ -405,22 +429,41 @@ class RFEntitiesOptionsFlow(config_entries.OptionsFlow):
         for service_name in esphome_services:
             if service_name.endswith("_send_raw_rf"):
                 bridges.append(f"esphome.{service_name}")
-        
-        current_tx_service = self.config_entry.data.get(CONF_TX_SERVICE, DEFAULT_TX_SERVICE)
-        current_rx_event = self.config_entry.data.get(CONF_RX_EVENT, DEFAULT_RX_EVENT)
-
-        schema_fields = {}
-        if bridges:
-            default_bridge = current_tx_service if current_tx_service in bridges else bridges[0]
-            schema_fields[vol.Optional("bridge_service", default=default_bridge)] = vol.In(bridges)
-            
-        schema_fields.update({
-            vol.Optional(CONF_TX_SERVICE, default=current_tx_service if current_tx_service not in bridges else ""): str,
-            vol.Optional(CONF_RX_EVENT, default=current_rx_event): str,
-        })
+                
+        current_tx = self.config_entry.data.get("tx_service")
+        if current_tx not in bridges:
+            bridges.append("Custom")
+            default_bridge = "Custom"
+        else:
+            bridges.append("Custom")
+            default_bridge = current_tx
 
         return self.async_show_form(
             step_id="edit_transceiver",
-            data_schema=vol.Schema(schema_fields),
+            data_schema=vol.Schema({
+                vol.Required("bridge_service", default=default_bridge): vol.In(bridges),
+                vol.Optional("tx_retries", default=self.config_entry.data.get("tx_retries", 3)): int,
+                vol.Optional("tx_delay_ms", default=self.config_entry.data.get("tx_delay_ms", 15)): int,
+            }),
             errors=errors,
+        )
+
+    async def async_step_custom_options(self, user_input=None):
+        if user_input is not None:
+            new_data = dict(self.config_entry.data)
+            new_data.update({
+                "tx_service": user_input["tx_service"],
+                "rx_event": user_input["rx_event"],
+                "tx_retries": getattr(self, "edit_retries", 3),
+                "tx_delay_ms": getattr(self, "edit_delay", 15),
+            })
+            self.hass.config_entries.async_update_entry(self.config_entry, data=new_data)
+            return self.async_create_entry(title="", data=dict(self.config_entry.options))
+
+        return self.async_show_form(
+            step_id="custom_options",
+            data_schema=vol.Schema({
+                vol.Required("tx_service", default=self.config_entry.data.get("tx_service", "")): str,
+                vol.Required("rx_event", default=self.config_entry.data.get("rx_event", "esphome.rf_code_received")): str,
+            })
         )

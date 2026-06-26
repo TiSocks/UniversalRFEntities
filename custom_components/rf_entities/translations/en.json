@@ -7,7 +7,15 @@
         "data": {
           "device_name": "Device Name",
           "bridge_service": "Detected ESPHome RF Bridge",
-          "tx_service": "Custom TX Service (Optional)",
+          "tx_retries": "Transmission Retries",
+          "tx_delay_ms": "Delay Between Retries (ms)"
+        }
+      },
+      "custom": {
+        "title": "Custom Configuration",
+        "description": "Specify your custom transmission service and receiver event.",
+        "data": {
+          "tx_service": "Custom TX Service",
           "rx_event": "Receiver Event"
         }
       }
@@ -59,8 +67,8 @@
         "description": "Update the RF transceiver bridge configuration.",
         "data": {
           "bridge_service": "Detected ESPHome RF Bridge",
-          "tx_service": "Custom TX Service (Optional)",
-          "rx_event": "Receiver Event"
+          "tx_retries": "Transmission Retries",
+          "tx_delay_ms": "Delay Between Retries (ms)"
         }
       },
       "learn_command": {
@@ -77,6 +85,14 @@
       "learn_success": {
         "title": "Successfully Learned RF Code!",
         "description": "Captured Code: {code}\nProtocol: {protocol}\n\nClick Submit to save this code to the entity."
+      },
+      "custom_options": {
+        "title": "Custom Configuration",
+        "description": "Specify your custom transmission service and receiver event.",
+        "data": {
+          "tx_service": "Custom TX Service",
+          "rx_event": "Receiver Event"
+        }
       }
     },
     "progress": {

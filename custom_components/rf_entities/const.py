@@ -39,3 +39,7 @@ ATTR_TIMEOUT = "timeout"
 # Internal flags / events
 LEARNING_TIMEOUT = 30
 EVENT_LEARNED_CODE = "rf_entities_learned_code"
+CONF_TX_RETRIES = "tx_retries"
+CONF_TX_DELAY_MS = "tx_delay_ms"
+DEFAULT_TX_RETRIES = 3
+DEFAULT_TX_DELAY_MS = 15
