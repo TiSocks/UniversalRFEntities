@@ -151,13 +151,13 @@ class RFButtonEntity(ButtonEntity):
                     except json.JSONDecodeError:
                         service_data["code"] = self._code
 
-                if self._protocol:
+                if self._protocol and not isinstance(service_data.get("code"), list):
                     try:
                         service_data["protocol"] = int(self._protocol)
                     except ValueError:
                         service_data["protocol"] = self._protocol
 
-                if self._pulse_length:
+                if self._pulse_length and not isinstance(service_data.get("code"), list):
                     try:
                         service_data["pulse_length"] = int(self._pulse_length)
                     except ValueError:
