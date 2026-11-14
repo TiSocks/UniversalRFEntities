@@ -1,0 +1,13 @@
+# Python caches, test state & secrets
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+.env
+.env.*
+secrets.yaml
+.DS_Store
+.gemini/

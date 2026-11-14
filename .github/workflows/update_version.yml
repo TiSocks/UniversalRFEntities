@@ -28,7 +28,7 @@ jobs:
           git add custom_components/rf_entities/manifest.json
           
           # Only commit if there are changes
-          if ! git diff --staged --empty; then
+          if ! git diff --staged --quiet; then
             git commit -m "chore: Auto-update manifest version to $VERSION"
             git push origin HEAD:master
           fi
